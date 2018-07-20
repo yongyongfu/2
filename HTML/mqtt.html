@@ -1,0 +1,299 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>DHT11温湿度WEB显示</title>
+    <script src="{{ url_for('static', filename=('js/jquery-3.1.1.min.js')) }}"></script>
+    <script src="{{ url_for('static', filename=('js/echarts.common.min.js')) }}"></script>
+    <style type="text/css">
+        #main-container{
+            margin-top: 20px;
+            margin-left: 200px;
+        }
+
+        #main-temp{
+            width: 400px;
+            height:350px;
+            float: left;
+            border:1px solid red;
+            margin-left: 100px;
+
+        }
+
+        #main-humi{
+            width: 400px;
+            height:350px;
+            float: left;
+            border:1px solid red;
+            margin-left: 100px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 为 ECharts 准备一个具备大小（宽高）的 DOM -->
+    <div id="main-container">
+
+        <div id="main-temp"></div>
+        <div id="main-humi"></div>
+    </div>
+
+
+    <script src="https://cdn.bootcss.com/paho-mqtt/1.0.2/mqttws31.min.js"></script>
+    <script type="text/javascript">
+        // 基于准备好的dom，初始化echarts实例
+        var temprature = [];
+        var humidity = [];
+        var myChart = echarts.init(document.getElementById('main-temp'));
+        var mychart2 = echarts.init(document.getElementById('main-humi'));
+        option = {
+            title: {
+                text: '温度动态数据图'
+            },
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: {
+                    type: 'cross',
+                    label: {
+                        backgroundColor: '#283b56'
+                    }
+                }
+            },
+            toolbox: {
+                show: true,
+                feature: {
+                    dataView: {readOnly: false},
+                    restore: {},
+                    saveAsImage: {}
+                }
+            },
+            dataZoom: {
+                show: false,
+                start: 0,
+                end: 100
+            },
+            xAxis: [
+                {
+                    type: 'category',
+                    boundaryGap: true,
+                    data: (function (){
+                        var now = new Date();
+                        var res = [];
+                        var len = 10;
+                        while (len--) {
+                            res.unshift(now.toLocaleTimeString().replace(/^\D*/,''));
+                            now = new Date(now - 2000);
+                        }
+                        return res;
+                    })()
+                },
+                {
+                    type: 'category',
+                    name: '时间',
+                    boundaryGap: true,
+                    data: (function (){
+                        var res = [];
+                        var len = 10;
+                        while (len--) {
+                            res.push(len + 1);
+                        }
+                        return res;
+                    })()
+                }
+            ],
+            yAxis: [
+                {
+                    type: 'value',
+                    scale: true,
+                    name: '温度(℃)',
+                    max: 100,
+                    min: 0,
+                    boundaryGap: [0.2, 0.2]
+                },
+                {
+                    type: 'value',
+                    scale: true,
+                    max: 100,
+                    min: 0,
+                    boundaryGap: [0.2, 0.2]
+                },
+            ],
+            series: [{
+                    name:'温度',
+                    type:'line',
+                    xAxisIndex: 1,
+                    yAxisIndex: 1,
+                    data:(function (){
+                        var res = [];
+                        var len = 10;
+                        while (len--) {
+                            res.push(0);
+                        }
+                        return res;
+                    })()
+                }
+            ]
+        };
+
+        option2 = {
+            title: {
+                text: '湿度动态数据图'
+            },
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: {
+                    type: 'cross',
+                    label: {
+                        backgroundColor: '#283b56'
+                    }
+                }
+            },
+            toolbox: {
+                show: true,
+                feature: {
+                    dataView: {readOnly: false},
+                    restore: {},
+                    saveAsImage: {}
+                }
+            },
+            dataZoom: {
+                show: false,
+                start: 0,
+                end: 100
+            },
+            xAxis: [
+                {
+                    type: 'category',
+                    boundaryGap: true,
+                    data: (function (){
+                        var now = new Date();
+                        var res = [];
+                        var len = 10;
+                        while (len--) {
+                            res.unshift(now.toLocaleTimeString().replace(/^\D*/,''));
+                            now = new Date(now - 2000);
+                        }
+                        return res;
+                    })()
+                },
+                {
+                    type: 'category',
+                    name: '时间',
+                    boundaryGap: true,
+                    data: (function (){
+                        var res = [];
+                        var len = 10;
+                        while (len--) {
+                            res.push(len + 1);
+                        }
+                        return res;
+                    })()
+                }
+            ],
+            yAxis: [
+                {
+                    type: 'value',
+                    scale: true,
+                    name: '湿度(%)',
+                    max: 100,
+                    min: 0,
+                    boundaryGap: [0.2, 0.2]
+                },
+                {
+                    type: 'value',
+                    scale: true,
+                    max: 100,
+                    min: 0,
+                    boundaryGap: [0.2, 0.2]
+                },
+            ],
+            series: [{
+                    name:'湿度',
+                    type:'line',
+                    xAxisIndex: 1,
+                    yAxisIndex: 1,
+                    data:(function (){
+                        var res = [];
+                        var len = 10;
+                        while (len--) {
+                            res.push(0);
+                        }
+                        return res;
+                    })()
+                }
+            ]
+        };
+
+        client = new Paho.MQTT.Client("120.79.165.74", Number(1883), "websockets-0000001");//建立客户端实例
+        client.connect({onSuccess:onConnect});//连接服务器并注册连接成功处理事件
+            function onConnect() {
+                console.log("onConnected");
+
+                topic = 'out000000000001';
+
+                client.subscribe(topic);//订阅主题
+                console.log("subscribed");
+                //发送消息
+            }
+            client.onConnectionLost = onConnectionLost;//注册连接断开处理事件
+            client.onMessageArrived = onMessageArrived;//注册消息接收处理事件
+            function onConnectionLost(responseObject) {
+                if (responseObject.errorCode !== 0) {
+                    console.log("onConnectionLost:"+responseObject.errorMessage);
+                    console.log("连接已断开");
+                 }
+            }
+            function onMessageArrived(message) {
+
+                console.log("收到消息:"+message.payloadString);
+                console.log("主题："+message.destinationName);
+
+                temprature = message.payloadString.slice(15,20);
+                humidity = message.payloadString.slice(32,37);
+
+
+                //console.log(temprature.slice(15,20));
+                //console.log(temprature.slice(32,37));
+
+            }
+
+
+
+        count = 11;
+        setInterval(function (){
+            axisData = (new Date()).toLocaleTimeString().replace(/^\D*/,'');
+            var data0 = option.series[0].data;
+//            var data1 = option.series[1].data;
+            var data3 = option2.series[0].data;
+//            var data4 = option2.series[1].data;
+
+
+            data0.shift();
+            data0.push(temprature);
+
+//            data1.shift();
+//            data1.push(humidity);
+
+            data3.shift();
+            data3.push(humidity);
+
+//            data4.shift();
+//            data4.push(humidity);
+
+            option.xAxis[0].data.shift();
+            option.xAxis[0].data.push(axisData);
+
+            option.xAxis[1].data.shift();
+            option.xAxis[1].data.push(count++);
+
+            option2.xAxis[0].data.shift();
+            option2.xAxis[0].data.push(axisData);
+
+            option2.xAxis[1].data.shift();
+            option2.xAxis[1].data.push(count++);
+
+            myChart.setOption(option);
+            mychart2.setOption(option2);
+        }, 2100);
+    </script>
+</body>
+</html>
